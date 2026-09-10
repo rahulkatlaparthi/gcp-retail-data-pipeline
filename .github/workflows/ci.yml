@@ -1,0 +1,191 @@
+name: Retail Data Pipeline CI
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+
+jobs:
+
+  validate:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ==========================================
+      # Checkout GitHub repository
+      # ==========================================
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+      # ==========================================
+      # Python
+      # ==========================================
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+
+      # ==========================================
+      # Install dependencies
+      # ==========================================
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install apache-beam[gcp]
+
+
+      # ==========================================
+      # Find and validate ALL Python files
+      # No filenames are hardcoded
+      # ==========================================
+
+      - name: Validate Python files
+        run: |
+
+          python_files=$(find . \
+            -type f \
+            -name "*.py" \
+            -not -path "./.git/*")
+
+          if [ -z "$python_files" ]; then
+            echo "No Python files found"
+            exit 1
+          fi
+
+          echo "Python files found:"
+
+          for file in $python_files
+          do
+            echo "--------------------------------"
+            echo "Checking: $file"
+
+            python -m py_compile "$file"
+
+            echo "OK: $file"
+          done
+
+
+      # ==========================================
+      # Find and validate ALL SQL files
+      # No SQL filenames are hardcoded
+      # ==========================================
+
+      - name: Validate SQL files
+        run: |
+
+          sql_files=$(find sql \
+            -type f \
+            -name "*.sql")
+
+          if [ -z "$sql_files" ]; then
+            echo "No SQL files found"
+            exit 1
+          fi
+
+          echo "SQL files found:"
+
+          for file in $sql_files
+          do
+            echo "--------------------------------"
+            echo "Checking: $file"
+
+            test -s "$file"
+
+            echo "OK: $file"
+          done
+
+
+      # ==========================================
+      # Validate CSV files
+      # ==========================================
+
+      - name: Validate CSV files
+        run: |
+
+          csv_files=$(find data \
+            -type f \
+            -name "*.csv")
+
+          if [ -z "$csv_files" ]; then
+            echo "No CSV files found"
+            exit 1
+          fi
+
+          echo "CSV files found:"
+
+          for file in $csv_files
+          do
+            echo "--------------------------------"
+            echo "Checking: $file"
+
+            test -s "$file"
+
+            echo "OK: $file"
+          done
+
+
+      # ==========================================
+      # Display project structure
+      # ==========================================
+
+      - name: Display project files
+        run: |
+
+          echo "=========================================="
+          echo "PYTHON FILES"
+          echo "=========================================="
+
+          find . \
+            -type f \
+            -name "*.py" \
+            -not -path "./.git/*"
+
+
+          echo "=========================================="
+          echo "SQL FILES"
+          echo "=========================================="
+
+          find sql \
+            -type f \
+            -name "*.sql"
+
+
+          echo "=========================================="
+          echo "CSV FILES"
+          echo "=========================================="
+
+          find data \
+            -type f \
+            -name "*.csv"
+
+
+          echo "=========================================="
+          echo "DAG FILES"
+          echo "=========================================="
+
+          find dags \
+            -type f \
+            -name "*.py"
+
+
+      # ==========================================
+      # Final result
+      # ==========================================
+
+      - name: CI completed
+        run: |
+          echo "=========================================="
+          echo "Retail Data Pipeline CI SUCCESS"
+          echo "=========================================="
